@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gerador de Assinaturas · Revi</title>
+<style>
+  @font-face {
+    font-family: "DM Sans";
+    src: url("fonts/DMSans-VariableFont.ttf") format("truetype-variations");
+    font-weight: 100 1000;
+    font-style: normal;
+    font-display: swap;
+  }
+  :root {
+    --navy-950: #05091F;
+    --navy-900: #0A1030;
+    --navy-800: #121A46;
+    --navy-700: #1B2566;
+    --navy-600: #2A3687;
+    --sky-400:  #7CC6FF;
+    --sky-500:  #56BBEE;
+    --brand-blue: #0A40C6;
+    --lime-400: #32C700;
+    --lime-300: #CFFF6B;
+    --white:   #FFFFFF;
+    --ink-100: #E6EAF3;
+    --ink-200: #C5CCE0;
+    --ink-300: #9AA3BE;
+    --ink-400: #6E779A;
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.16);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+    background: radial-gradient(120% 80% at 50% 0%, #1A2A7A 0%, #0A1030 55%, #05091F 100%);
+    color: var(--white);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  .app {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    height: 100vh;
+  }
+  /* ────── EDITOR PANEL ────── */
+  .editor {
+    background: rgba(10,16,48,0.65);
+    backdrop-filter: blur(16px);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 28px 28px 80px;
+  }
+  .editor::-webkit-scrollbar { width: 8px; }
+  .editor::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 28px;
+  }
+  .brand-mark {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--sky-500), var(--lime-400));
+    border-radius: 10px;
+    display: grid; place-items: center;
+    font-weight: 700; color: var(--navy-950); font-size: 16px;
+  }
+  .brand-text {
+    font-size: 13px; color: var(--ink-200);
+    letter-spacing: 0.04em; text-transform: uppercase; font-weight: 600;
+  }
+  h1.title {
+    font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
+    margin: 0 0 6px;
+  }
+  .subtitle {
+    font-size: 13px; color: var(--ink-300); margin: 0 0 28px; line-height: 1.5;
+  }
+  .section {
+    margin-bottom: 24px;
+  }
+  .section-title {
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    font-weight: 700; color: var(--ink-300);
+    margin: 0 0 14px;
+  }
+  .field {
+    margin-bottom: 12px;
+  }
+  .field label {
+    display: block;
+    font-size: 12px; color: var(--ink-200); margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .input, .textarea {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--white);
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    outline: none;
+  }
+  .input:focus {
+    border-color: var(--sky-500);
+    background: rgba(255,255,255,0.08);
+    box-shadow: 0 0 0 3px rgba(86,187,238,0.15);
+  }
+  .input::placeholder { color: var(--ink-400); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* Layout selector cards */
+  .layouts {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .layout-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    text-align: left;
+    color: var(--white);
+    font-family: inherit;
+  }
+  .layout-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--border-strong);
+  }
+  .layout-card.active {
+    border-color: var(--lime-400);
+    background: rgba(50,199,0,0.08);
+    box-shadow: 0 0 0 1px var(--lime-400), 0 12px 32px -8px rgba(50,199,0,0.3);
+  }
+  .layout-thumb {
+    height: 56px; border-radius: 8px;
+    background: #fff; margin-bottom: 8px;
+    display: flex; align-items: center; padding: 8px;
+    overflow: hidden;
+  }
+  .layout-thumb-bars { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  .bar { height: 4px; border-radius: 2px; }
+  .layout-name { font-size: 12px; font-weight: 600; color: var(--white); }
+  .layout-desc { font-size: 10.5px; color: var(--ink-300); margin-top: 1px; }
+
+  /* Toggle switch */
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0;
+  }
+  .toggle-label { font-size: 13px; color: var(--ink-100); }
+  .toggle {
+    position: relative; width: 36px; height: 20px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 999px; cursor: pointer;
+    transition: background 220ms;
+    border: none; padding: 0;
+  }
+  .toggle::after {
+    content: ''; position: absolute;
+    width: 14px; height: 14px;
+    border-radius: 50%; background: white;
+    top: 3px; left: 3px;
+    transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .toggle.on { background: var(--lime-400); }
+  .toggle.on::after { transform: translateX(16px); }
+
+  /* File upload */
+  .file-pick {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px dashed var(--border-strong);
+    border-radius: 14px;
+    cursor: pointer;
+    font-size: 13px; color: var(--ink-200);
+    transition: all 220ms;
+  }
+  .file-pick:hover {
+    border-color: var(--sky-500);
+    background: rgba(86,187,238,0.06);
+    color: var(--white);
+  }
+  .file-pick input { display: none; }
+  .photo-preview {
+    width: 36px; height: 36px; border-radius: 50%;
+    object-fit: cover; flex-shrink: 0;
+    border: 2px solid var(--border-strong);
+  }
+  /* Palette presets */
+  .presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .preset {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 10px 12px;
+    cursor: pointer; text-align: left;
+    color: var(--white); font-family: inherit;
+    transition: all 220ms;
+  }
+  .preset:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+  .preset.active {
+    border-color: var(--lime-400);
+    background: rgba(50,199,0,0.08);
+    box-shadow: 0 0 0 1px var(--lime-400);
+  }
+  .preset-swatches { display: flex; gap: 4px; margin-bottom: 6px; }
+  .preset-swatch { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.15); }
+  .preset-name { font-size: 11.5px; font-weight: 600; }
+  .btn-link {
+    background: none; border: none;
+    color: var(--sky-400); font-family: inherit;
+    font-size: 12.5px; font-weight: 500; cursor: pointer;
+    padding: 4px 0; text-decoration: none;
+  }
+  .btn-link:hover { color: var(--lime-400); }
+  .colors-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .color-field { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); }
+  .color-field input[type="color"] {
+    width: 28px; height: 28px; padding: 0;
+    border: none; border-radius: 6px; cursor: pointer;
+    background: transparent; flex-shrink: 0;
+  }
+  .color-field input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; border-radius: 6px; }
+  .color-field input[type="color"]::-webkit-color-swatch { border: 1px solid var(--border-strong); border-radius: 6px; }
+  .color-field-label { font-size: 10.5px; color: var(--ink-200); flex: 1; line-height: 1.2; }
+
+  /* ────── PREVIEW PANEL ────── */
+  .preview-pane {
+    position: relative;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    background: var(--navy-950);
+  }
+  .preview-toolbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(5,9,31,0.6);
+    backdrop-filter: blur(12px);
+    flex-shrink: 0;
+  }
+  .bg-picker {
+    display: flex; gap: 6px; align-items: center;
+    background: rgba(255,255,255,0.04);
+    padding: 4px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+  }
+  .bg-swatch {
+    width: 26px; height: 26px;
+    border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 180ms;
+  }
+  .bg-swatch.active {
+    border-color: var(--lime-400);
+    transform: scale(1.05);
+  }
+  .toolbar-spacer { flex: 1; }
+  .toolbar-info {
+    font-size: 12px; color: var(--ink-300);
+  }
+
+  .preview-stage {
+    flex: 1;
+    overflow: auto;
+    padding: 60px 60px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 220ms;
+  }
+  .preview-canvas {
+    background: white;
+    border-radius: 16px;
+    padding: 56px 56px;
+    max-width: 760px;
+    width: 100%;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.5),
+                0 0 0 1px rgba(255,255,255,0.04);
+    position: relative;
+  }
+  .preview-canvas.bg-transparent {
+    background: transparent;
+    box-shadow: none;
+    background-image:
+      linear-gradient(45deg, rgba(255,255,255,0.06) 25%, transparent 25%),
+      linear-gradient(-45deg, rgba(255,255,255,0.06) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.06) 75%),
+      linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.06) 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, 8px 0;
+  }
+  .email-meta {
+    font-size: 13px; color: #6E779A; line-height: 1.5;
+    margin-bottom: 20px; padding-bottom: 14px;
+    border-bottom: 1px solid #E6EAF3;
+  }
+  .email-meta strong { color: #0A1030; font-weight: 600; }
+  .email-body {
+    font-size: 14px; color: #4A537A; line-height: 1.7;
+    margin-bottom: 32px;
+  }
+  .email-body p { margin: 0 0 8px; }
+  #signature-mount {
+    /* signature renders here */
+  }
+  .preview-canvas.bg-transparent .email-meta,
+  .preview-canvas.bg-transparent .email-body { display: none; }
+
+  /* ────── EXPORT BAR (bottom of editor) ────── */
+  .export-bar {
+    position: fixed;
+    bottom: 0; left: 0; width: 420px;
+    background: rgba(5,9,31,0.92);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    padding: 16px 20px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    z-index: 10;
+  }
+  .btn {
+    border: none; cursor: pointer;
+    font-family: inherit; font-weight: 600; font-size: 13px;
+    padding: 11px 14px;
+    border-radius: 999px;
+    transition: all 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    letter-spacing: -0.01em;
+  }
+  .btn-primary {
+    background: var(--lime-400); color: var(--navy-950);
+  }
+  .btn-primary:hover {
+    filter: brightness(1.08); transform: translateY(-1px);
+    box-shadow: 0 8px 24px -6px rgba(50,199,0,0.5);
+  }
+  .btn-secondary {
+    background: rgba(255,255,255,0.06);
+    color: var(--white);
+    border: 1px solid var(--border-strong);
+  }
+  .btn-secondary:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: var(--sky-500);
+  }
+  .btn-ghost {
+    grid-column: span 2;
+    background: transparent;
+    color: var(--ink-200);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover {
+    background: rgba(255,255,255,0.04);
+    color: var(--white);
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--navy-700);
+    border: 1px solid var(--lime-400);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 999px;
+    font-size: 13px; font-weight: 500;
+    box-shadow: 0 12px 32px -8px rgba(50,199,0,0.4);
+    opacity: 0; pointer-events: none;
+    transition: all 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    z-index: 100;
+  }
+  .toast.show {
+    opacity: 1; transform: translateX(-50%) translateY(0);
+  }
+
+  /* HTML modal */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(5,9,31,0.72);
+    backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 50;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: var(--navy-800);
+    border: 1px solid var(--border-strong);
+    border-radius: 28px;
+    padding: 28px;
+    max-width: 720px;
+    width: 90%; max-height: 80vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+  }
+  .modal-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px;
+  }
+  .modal-head h3 { margin: 0; font-size: 18px; font-weight: 700; }
+  .modal-close {
+    background: rgba(255,255,255,0.06); border: none;
+    color: var(--white); width: 32px; height: 32px;
+    border-radius: 50%; cursor: pointer;
+    font-size: 18px; line-height: 1;
+  }
+  .modal-close:hover { background: rgba(255,255,255,0.12); }
+  .modal-code {
+    flex: 1;
+    background: var(--navy-950);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    color: var(--ink-100);
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.5;
+  }
+  .modal-actions {
+    display: flex; gap: 8px; margin-top: 14px;
+    justify-content: flex-end;
+  }
+
+  @media (max-width: 980px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .editor { max-height: 50vh; }
+    .export-bar { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ──────────── EDITOR ──────────── -->
+  <aside class="editor">
+    <div class="brand">
+      <div class="brand-mark">R</div>
+      <div class="brand-text">Revi · Email Signature</div>
+    </div>
+    <h1 class="title">Gerador de assinaturas</h1>
+    <p class="subtitle">Preencha os campos, escolha um layout, e baixe ou copie sua assinatura pronta para colar no Gmail, Outlook ou cliente de e-mail.</p>
+
+    <!-- Layout picker -->
+    <div class="section">
+      <div class="section-title">Layout</div>
+      <div class="layouts" id="layouts"></div>
+    </div>
+
+    <!-- Person info -->
+    <div class="section">
+      <div class="section-title">Seus dados</div>
+      <div class="field">
+        <label>Nome</label>
+        <input class="input" id="f-name" placeholder="Lorem Ipsum" />
+      </div>
+      <div class="field">
+        <label>Cargo</label>
+        <input class="input" id="f-title" placeholder="Marketing Manager" />
+      </div>
+    </div>
+
+    <!-- Contact -->
+    <div class="section">
+      <div class="section-title">Contato</div>
+      <div class="field">
+        <label>E-mail</label>
+        <input class="input" id="f-email" placeholder="lorem.ipsum@userevi.com" />
+      </div>
+      <div class="field">
+        <label>WhatsApp</label>
+        <input class="input" id="f-whatsapp" placeholder="(00) 00000-0000" />
+      </div>
+      <div class="field">
+        <label>Site</label>
+        <input class="input" id="f-site" placeholder="userevi.com" />
+      </div>
+      <div class="field">
+        <label>LinkedIn (URL completa)</label>
+        <input class="input" id="f-linkedin" placeholder="https://linkedin.com/in/seu-perfil" />
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Mostrar Instagram</span>
+        <button class="toggle on" id="t-instagram" aria-label="Toggle Instagram"></button>
+      </div>
+      <div class="field">
+        <label>Instagram da Revi</label>
+        <input class="input" id="f-instagram" placeholder="revi_br" />
+      </div>
+    </div>
+
+    <!-- Photo -->
+    <div class="section">
+      <div class="section-title">Foto</div>
+      <div class="toggle-row">
+        <span class="toggle-label">Mostrar foto</span>
+        <button class="toggle on" id="t-photo" aria-label="Toggle foto"></button>
+      </div>
+      <label class="file-pick" id="photo-pick" style="margin-top: 4px;">
+        <img id="photo-preview" class="photo-preview" style="display:none" alt="" />
+        <span id="photo-pick-label">Clique para enviar uma foto…</span>
+        <input type="file" accept="image/*" id="f-photo" />
+      </label>
+    </div>
+
+    <!-- Logo -->
+    <div class="section">
+      <div class="section-title">Logo Revi</div>
+      <div class="toggle-row">
+        <span class="toggle-label">Incluir logo da Revi</span>
+        <button class="toggle on" id="t-logo" aria-label="Toggle logo"></button>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="section">
+      <div class="section-title">CTA / Banner</div>
+      <div class="toggle-row">
+        <span class="toggle-label">Incluir botão CTA</span>
+        <button class="toggle" id="t-cta" aria-label="Toggle CTA"></button>
+      </div>
+      <div class="field" style="margin-top:6px">
+        <label>Texto do botão</label>
+        <input class="input" id="f-cta-text" placeholder="Agendar demo" />
+      </div>
+      <div class="field">
+        <label>URL do botão</label>
+        <input class="input" id="f-cta-url" placeholder="https://meetings.hubspot.com/..." />
+      </div>
+    </div>
+
+    <!-- Palette -->
+    <div class="section">
+      <div class="section-title">Paleta de cores</div>
+      <div class="presets" id="presets"></div>
+      <button class="btn-link" id="toggle-colors">Editar cores manualmente ▾</button>
+      <div class="colors-grid" id="colors-grid" style="display:none;"></div>
+    </div>
+  </aside>
+
+  <!-- ──────────── PREVIEW ──────────── -->
+  <main class="preview-pane">
+    <div class="preview-toolbar">
+      <div class="toolbar-info">Pré-visualização</div>
+      <div class="toolbar-spacer"></div>
+      <div class="bg-picker" title="Cor de fundo do preview">
+        <div class="bg-swatch active" data-bg="#FFFFFF" style="background:#FFFFFF" title="Branco"></div>
+        <div class="bg-swatch" data-bg="#F5F7FB" style="background:#F5F7FB" title="Cinza claro"></div>
+        <div class="bg-swatch" data-bg="#0A1030" style="background:#0A1030" title="Navy Revi"></div>
+        <div class="bg-swatch" data-bg="transparent" style="background: repeating-conic-gradient(#ddd 0 25%, #fff 0 50%) 50% / 12px 12px" title="Transparente"></div>
+      </div>
+    </div>
+
+    <div class="preview-stage" id="stage" style="background:#0A1030;">
+      <div class="preview-canvas" id="canvas">
+        <div class="email-meta">
+          <strong>De:</strong> <span id="m-name">Seu Nome</span> &lt;<span id="m-email">voce@userevi.com</span>&gt;<br />
+          <strong>Para:</strong> cliente@email.com<br />
+          <strong>Assunto:</strong> Vamos conversar sobre sua estratégia de CRM
+        </div>
+        <div class="email-body">
+          <p>Olá!</p>
+          <p>Foi ótimo conversar com você. Segue abaixo um resumo do que combinamos — qualquer dúvida, é só me chamar no WhatsApp.</p>
+          <p>Abraço,</p>
+        </div>
+        <div id="signature-mount"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Export bar -->
+<div class="export-bar">
+  <button class="btn btn-primary" id="btn-copy-rich">Copiar assinatura (Gmail / Outlook)</button>
+  <button class="btn btn-secondary" id="btn-copy-html">Copiar código HTML (HubSpot)</button>
+</div>
+
+<div class="toast" id="toast">Copiado!</div>
+<script src="signature-templates.js?v=12"></script>
+<script>
+  const state = {
+    layout: 'corporate',
+    name: '',
+    title: '',
+    email: '',
+    whatsapp: '',
+    site: 'userevi.com',
+    linkedin: '',
+    instagram: 'revi_br',
+    showInstagram: true,
+    photo: '',
+    showPhoto: true,
+    showLogo: true,
+    showCta: false,
+    ctaText: 'Agendar demo',
+    ctaUrl: 'https://meetings.hubspot.com/nicholas-love/revezamento-de-qualificacao-?uuid=4523ca86-cf3e-40f5-b09c-2a00a9232ddd',
+    paletteId: 'revi',
+    palette: { ...window.DEFAULT_PALETTE },
+  };
+
+  // ── Layout cards ──
+  const LAYOUTS = window.SignatureTemplates;
+  const layoutsEl = document.getElementById('layouts');
+  const layoutThumbs = {
+    corporate: () => `<div class="layout-thumb"><div style="width:24px;height:24px;border-radius:50%;background:#0A40C6;margin-right:6px;flex-shrink:0;"></div><div class="layout-thumb-bars"><div class="bar" style="background:#0A1030;width:60%"></div><div class="bar" style="background:#0A40C6;width:50%;height:3px"></div><div class="bar" style="background:#9AA3BE;width:70%;height:3px"></div></div></div>`,
+    accentBar: () => `<div class="layout-thumb"><div style="width:3px;height:32px;background:linear-gradient(180deg,#56BBEE,#32C700);border-radius:2px;margin-right:8px;flex-shrink:0;"></div><div class="layout-thumb-bars"><div class="bar" style="background:#0A1030;width:60%"></div><div class="bar" style="background:#0A40C6;width:50%;height:3px"></div><div class="bar" style="background:#9AA3BE;width:70%;height:3px"></div></div></div>`,
+    card: () => `<div class="layout-thumb" style="background:linear-gradient(135deg,#1A2A7A,#0A1030);padding:6px;"><div style="width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,0.2);margin-right:6px;flex-shrink:0;"></div><div class="layout-thumb-bars"><div class="bar" style="background:#fff;width:60%"></div><div class="bar" style="background:#56BBEE;width:50%;height:3px"></div><div class="bar" style="background:#9AA3BE;width:70%;height:3px"></div></div></div>`,
+    avatar: () => `<div class="layout-thumb"><div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#56BBEE,#32C700);padding:2px;margin-right:8px;flex-shrink:0;"><div style="width:100%;height:100%;border-radius:50%;background:#0A40C6"></div></div><div class="layout-thumb-bars"><div class="bar" style="background:#32C700;width:30%;height:3px"></div><div class="bar" style="background:#0A1030;width:70%;height:5px"></div><div class="bar" style="background:#9AA3BE;width:60%;height:3px"></div></div></div>`,
+  };
+
+  Object.values(LAYOUTS).forEach(L => {
+    const btn = document.createElement('button');
+    btn.className = 'layout-card' + (L.id === state.layout ? ' active' : '');
+    btn.dataset.layout = L.id;
+    btn.innerHTML = `${layoutThumbs[L.id]()}<div class="layout-name">${L.name}</div><div class="layout-desc">${L.desc}</div>`;
+    btn.addEventListener('click', () => {
+      state.layout = L.id;
+      document.querySelectorAll('.layout-card').forEach(c => c.classList.toggle('active', c.dataset.layout === L.id));
+      render();
+    });
+    layoutsEl.appendChild(btn);
+  });
+
+  // ── Field bindings ──
+  const fields = ['name','title','email','whatsapp','site','linkedin','instagram','ctaText','ctaUrl'];
+  const fmap = { name:'f-name', title:'f-title', email:'f-email', whatsapp:'f-whatsapp', site:'f-site', linkedin:'f-linkedin', instagram:'f-instagram', ctaText:'f-cta-text', ctaUrl:'f-cta-url' };
+  fields.forEach(k => {
+    const el = document.getElementById(fmap[k]);
+    el.value = state[k];
+    el.addEventListener('input', () => { state[k] = el.value; render(); });
+  });
+
+  // ── Toggles ──
+  function setupToggle(id, key) {
+    const t = document.getElementById(id);
+    if (state[key]) t.classList.add('on');
+    t.addEventListener('click', () => {
+      state[key] = !state[key];
+      t.classList.toggle('on', state[key]);
+      render();
+    });
+  }
+  setupToggle('t-photo', 'showPhoto');
+  setupToggle('t-logo', 'showLogo');
+  setupToggle('t-cta', 'showCta');
+  setupToggle('t-instagram', 'showInstagram');
+
+  // ── Palette presets ──
+  const presetsEl = document.getElementById('presets');
+  window.PALETTE_PRESETS.forEach(preset => {
+    const btn = document.createElement('button');
+    btn.className = 'preset' + (preset.id === state.paletteId ? ' active' : '');
+    btn.dataset.preset = preset.id;
+    const swatches = ['brandBlue','sky','lime','gradFrom','gradTo'].map(k =>
+      `<div class="preset-swatch" style="background:${preset.palette[k]}"></div>`).join('');
+    btn.innerHTML = `<div class="preset-swatches">${swatches}</div><div class="preset-name">${preset.name}</div>`;
+    btn.addEventListener('click', () => {
+      state.paletteId = preset.id;
+      state.palette = { ...preset.palette };
+      document.querySelectorAll('.preset').forEach(p => p.classList.toggle('active', p.dataset.preset === preset.id));
+      buildColorGrid();
+      render();
+    });
+    presetsEl.appendChild(btn);
+  });
+
+  // ── Color editor ──
+  const COLOR_LABELS = {
+    brandBlue: 'Azul Revi',
+    sky: 'Azul claro',
+    lime: 'Verde lime',
+    navy: 'Navy texto',
+    ink2: 'Texto secundário',
+    ink3: 'Texto terciário',
+    border: 'Bordas/divisores',
+    gradFrom: 'Gradiente início',
+    gradTo: 'Gradiente fim',
+    gradCardFrom: 'Card BG início',
+    gradCardTo: 'Card BG fim',
+  };
+  const colorsGrid = document.getElementById('colors-grid');
+  function buildColorGrid() {
+    colorsGrid.innerHTML = '';
+    Object.entries(COLOR_LABELS).forEach(([key, label]) => {
+      const f = document.createElement('div');
+      f.className = 'color-field';
+      f.innerHTML = `<input type="color" value="${state.palette[key]}" data-key="${key}"/><div class="color-field-label">${label}</div>`;
+      const inp = f.querySelector('input');
+      inp.addEventListener('input', e => {
+        state.palette[key] = e.target.value;
+        // Mark as custom
+        document.querySelectorAll('.preset').forEach(p => p.classList.remove('active'));
+        state.paletteId = 'custom';
+        render();
+      });
+      colorsGrid.appendChild(f);
+    });
+  }
+  buildColorGrid();
+  document.getElementById('toggle-colors').addEventListener('click', (e) => {
+    const open = colorsGrid.style.display !== 'none';
+    colorsGrid.style.display = open ? 'none' : 'grid';
+    e.target.textContent = open ? 'Editar cores manualmente ▾' : 'Ocultar cores ▴';
+  });
+
+  // ── Photo upload ──
+  const photoInput = document.getElementById('f-photo');
+  const photoPreview = document.getElementById('photo-preview');
+  const photoLabel = document.getElementById('photo-pick-label');
+  photoInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      // Pre-crop to a circle so the photo travels as a circular PNG with
+      // transparent corners. Many email clients (Outlook desktop, some Gmail
+      // configs) strip border-radius on <img>; baking the circle into the
+      // pixels guarantees it round everywhere.
+      circleCropDataUri(ev.target.result, 256).then(circular => {
+        state.photo = circular;
+        photoPreview.src = state.photo;
+        photoPreview.style.display = 'block';
+        photoLabel.textContent = file.name;
+        render();
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Returns a PNG data-URI of the image cropped to a centered circle of `size` px.
+  function circleCropDataUri(srcDataUri, size = 256) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = size;
+        c.height = size;
+        const ctx = c.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        // Circular clip
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(size/2, size/2, size/2, 0, Math.PI*2);
+        ctx.closePath();
+        ctx.clip();
+        // Cover-fit the source into the square
+        const sw = img.naturalWidth, sh = img.naturalHeight;
+        const scale = Math.max(size/sw, size/sh);
+        const dw = sw * scale, dh = sh * scale;
+        const dx = (size - dw) / 2, dy = (size - dh) / 2;
+        ctx.drawImage(img, dx, dy, dw, dh);
+        ctx.restore();
+        resolve(c.toDataURL('image/png'));
+      };
+      img.onerror = reject;
+      img.src = srcDataUri;
+    });
+  }
+
+  // ── Background swatches ──
+  const stage = document.getElementById('stage');
+  const canvas = document.getElementById('canvas');
+  document.querySelectorAll('.bg-swatch').forEach(s => {
+    s.addEventListener('click', () => {
+      document.querySelectorAll('.bg-swatch').forEach(x => x.classList.remove('active'));
+      s.classList.add('active');
+      const bg = s.dataset.bg;
+      if (bg === 'transparent') {
+        canvas.classList.add('bg-transparent');
+        stage.style.background = '#0A1030';
+      } else {
+        canvas.classList.remove('bg-transparent');
+        canvas.style.background = bg;
+        // adjust stage background for contrast
+        stage.style.background = bg === '#0A1030' ? '#05091F' : '#0A1030';
+      }
+    });
+  });
+
+  // ── Render ──
+  // Cache for data-URI versions of the logo PNGs (used in exports so the HTML
+  // works in Gmail/Outlook without depending on the local `assets/` folder).
+  const LOGO_DATA_URIS = {};
+  async function loadLogoDataUri(src) {
+    if (LOGO_DATA_URIS[src]) return LOGO_DATA_URIS[src];
+    const r = await fetch(src);
+    const b = await r.blob();
+    const dataUrl = await new Promise(res => {
+      const fr = new FileReader();
+      fr.onload = () => res(fr.result);
+      fr.readAsDataURL(b);
+    });
+    LOGO_DATA_URIS[src] = dataUrl;
+    return dataUrl;
+  }
+  // Preload all assets we may need to inline (logos + social icons)
+  const ASSET_PATHS = [
+    'assets/logo-revi-fundo-claro.png',
+    'assets/logo-revi-fundo-escuro.png',
+    'assets/linkedin-blue.png',
+    'assets/linkedin-white.png',
+    'assets/whatsapp-blue.png',
+    'assets/whatsapp-white.png',
+    'assets/instagram-blue.png',
+    'assets/instagram-white.png',
+  ];
+  Promise.all(ASSET_PATHS.map(loadLogoDataUri)).catch(() => {});
+
+  function inlineLogosForExport(html) {
+    let out = html;
+    for (const [src, dataUri] of Object.entries(LOGO_DATA_URIS)) {
+      out = out.split(`src="${src}"`).join(`src="${dataUri}"`);
+    }
+    return out;
+  }
+  // Pre-build the inlined HTML whenever state changes so click → copy is sync
+  // and avoids the "Document is not focused" error in sandboxed iframes.
+  // Defined as `function` so it's hoisted and callable from render() below.
+  let _exportHtml = '';
+  async function refreshExportHtml() {
+    try {
+      await Promise.all(ASSET_PATHS.map(loadLogoDataUri));
+      const tpl = LAYOUTS[state.layout];
+      _exportHtml = inlineLogosForExport(tpl.render(state).trim());
+    } catch (e) { console.error(e); }
+  }
+
+  function render() {
+    const tpl = LAYOUTS[state.layout];
+    const html = tpl.render(state);
+    document.getElementById('signature-mount').innerHTML = html;
+    document.getElementById('m-name').textContent = state.name || 'Seu Nome';
+    document.getElementById('m-email').textContent = state.email || 'voce@userevi.com';
+    refreshExportHtml();
+  }
+  render();
+
+  // ── Export ──
+  const toast = document.getElementById('toast');
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  function copyToClipboard(opts) {
+    // Try sync execCommand first, then async clipboard API, then fall back
+    // to opening a manual-copy overlay so the user always has a path.
+    const { html, plain, kind } = opts;
+    const successMsg = kind === 'rich'
+      ? 'Assinatura copiada — cole no Gmail / Outlook'
+      : 'Código HTML copiado — cole no HubSpot';
+
+    // ─ Method A: synchronous execCommand
+    try {
+      if (kind === 'rich') {
+        const div = document.createElement('div');
+        div.contentEditable = 'true';
+        div.style.cssText = 'position:fixed;left:0;top:0;opacity:0;pointer-events:none;';
+        div.innerHTML = html;
+        document.body.appendChild(div);
+        const range = document.createRange();
+        range.selectNodeContents(div);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        const ok = document.execCommand('copy');
+        sel.removeAllRanges();
+        div.remove();
+        if (ok) { showToast(successMsg); return; }
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = plain;
+        ta.style.cssText = 'position:fixed;left:0;top:0;opacity:0;';
+        document.body.appendChild(ta);
+        ta.focus(); ta.select();
+        const ok = document.execCommand('copy');
+        ta.remove();
+        if (ok) { showToast(successMsg); return; }
+      }
+    } catch (e) { /* fall through */ }
+
+    // ─ Method B: async Clipboard API (might fail in sandboxed iframe)
+    const tryAsync = (kind === 'rich' && navigator.clipboard && window.ClipboardItem)
+      ? navigator.clipboard.write([new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([plain], { type: 'text/plain' }),
+        })])
+      : (navigator.clipboard ? navigator.clipboard.writeText(plain) : Promise.reject());
+
+    tryAsync.then(() => showToast(successMsg)).catch(() => {
+      // ─ Method C: manual-copy overlay
+      openManualCopyOverlay(kind === 'rich' ? html : plain, kind);
+    });
+  }
+
+  // Manual-copy fallback overlay — always works because the user's own Cmd+C
+  // is allowed by every browser even in restrictive sandboxed contexts.
+  function openManualCopyOverlay(text, kind) {
+    let overlay = document.getElementById('manual-copy-overlay');
+    if (overlay) overlay.remove();
+    overlay = document.createElement('div');
+    overlay.id = 'manual-copy-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(5,9,31,0.82);backdrop-filter:blur(8px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:32px;';
+    overlay.innerHTML = `
+      <div style="background:#0E1438;border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:28px;max-width:680px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,0.5);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <h3 style="margin:0;color:#fff;font-size:18px;font-weight:700;">${kind === 'rich' ? 'Copiar assinatura' : 'Copiar código HTML'}</h3>
+          <button class="btn btn-ghost" id="manual-close" style="padding:6px 12px;">Fechar</button>
+        </div>
+        <p style="color:#9AA3BE;font-size:13px;line-height:1.5;margin:0 0 14px;">
+          O navegador bloqueou a cópia automática. <strong style="color:#fff;">Selecione tudo (Cmd/Ctrl + A) e copie (Cmd/Ctrl + C)</strong> abaixo.
+        </p>
+        <textarea id="manual-textarea" readonly style="width:100%;height:240px;padding:14px;background:#05091F;border:1px solid rgba(255,255,255,0.10);border-radius:12px;color:#E6EAF3;font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.55;resize:vertical;">${text.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
+        <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end;">
+          <button class="btn btn-primary" id="manual-select-all">Selecionar tudo</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const ta = overlay.querySelector('#manual-textarea');
+    ta.focus();
+    ta.select();
+    overlay.querySelector('#manual-close').onclick = () => overlay.remove();
+    overlay.querySelector('#manual-select-all').onclick = () => { ta.focus(); ta.select(); };
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  }
+
+  function copyRich() {
+    const sig = _exportHtml || '';
+    if (!sig) { showToast('Aguarde um instante…'); return; }
+    const plain = sig.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    copyToClipboard({ html: sig, plain, kind: 'rich' });
+  }
+
+  function copyHtml() {
+    const sig = _exportHtml || '';
+    if (!sig) { showToast('Aguarde um instante…'); return; }
+    copyToClipboard({ html: sig, plain: sig, kind: 'code' });
+  }
+
+  document.getElementById('btn-copy-rich').addEventListener('click', copyRich);
+  document.getElementById('btn-copy-html').addEventListener('click', copyHtml);
+</script>
+
+</body>
+</html>
