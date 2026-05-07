@@ -584,7 +584,6 @@
 </div>
 
 <div class="toast" id="toast">Copiado!</div>
-<script src="config.js"></script>
 <script src="signature-templates.js?v=12"></script>
 <script>
   const state = {
@@ -716,19 +715,12 @@
 
   // ── Photo upload ──
   async function uploadToHubspot(dataUri, filename) {
-    const token = window.REVI_HS_TOKEN || '';
-    if (!token) throw new Error('Token HubSpot não configurado');
-    const blob = await fetch(dataUri).then(r => r.blob());
-    const form = new FormData();
-    form.append('file', blob, filename);
-    form.append('options', JSON.stringify({ access: 'PUBLIC_INDEXABLE', overwrite: false }));
-    form.append('folderPath', '/assinaturas-email');
-    const res = await fetch('https://api.hubapi.com/files/v3/files', {
+    const res = await fetch('/api/upload-photo', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: form,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataUri, filename }),
     });
-    if (!res.ok) throw new Error(`HubSpot upload error ${res.status}`);
+    if (!res.ok) throw new Error(`Upload error ${res.status}`);
     const data = await res.json();
     return data.url;
   }
