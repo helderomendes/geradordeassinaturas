@@ -859,12 +859,10 @@
     let html = tpl.render(state);
     const base = (state.imageBaseUrl || '').replace(/\/$/, '');
     if (base) {
-      // Replace relative asset paths with absolute URLs, leaving base64 photo untouched.
       html = html.replace(/src="assets\//g, `src="${base}/`);
-    } else {
-      // No base URL configured — fall back to inlined base64 so images still show.
-      html = inlineLogosForExport(html);
     }
+    // Without a base URL keep src="assets/..." as relative paths.
+    // Never use base64 here — that's what blows past HubSpot's 65 535-char limit.
     return minifyHtml(html);
   }
 
