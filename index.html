@@ -584,6 +584,7 @@
 </div>
 
 <div class="toast" id="toast">Copiado!</div>
+<script src="config.js"></script>
 <script src="signature-templates.js?v=12"></script>
 <script>
   const state = {
@@ -597,6 +598,7 @@
     instagram: 'revi_br',
     showInstagram: true,
     photo: '',
+    photoHubspotUrl: '',
     showPhoto: true,
     showLogo: true,
     showCta: false,
@@ -713,6 +715,24 @@
   });
 
   // ── Photo upload ──
+  async function uploadToHubspot(dataUri, filename) {
+    const token = window.REVI_HS_TOKEN || '';
+    if (!token) throw new Error('Token HubSpot não configurado');
+    const blob = await fetch(dataUri).then(r => r.blob());
+    const form = new FormData();
+    form.append('file', blob, filename);
+    form.append('options', JSON.stringify({ access: 'PUBLIC_INDEXABLE', overwrite: false }));
+    form.append('folderPath', '/assinaturas-email');
+    const res = await fetch('https://api.hubapi.com/files/v3/files', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: form,
+    });
+    if (!res.ok) throw new Error(`HubSpot upload error ${res.status}`);
+    const data = await res.json();
+    return data.url;
+  }
+
   const photoInput = document.getElementById('f-photo');
   const photoPreview = document.getElementById('photo-preview');
   const photoLabel = document.getElementById('photo-pick-label');
@@ -721,18 +741,22 @@
     if (!file) return;
     const reader = new FileReader();
     reader.onload = ev => {
-      // Pre-crop to a circle so the photo travels as a circular PNG with
-      // transparent corners. Many email clients (Outlook desktop, some Gmail
-      // configs) strip border-radius on <img>; baking the circle into the
-      // pixels guarantees it round everywhere.
-      // 128px keeps good quality in email while staying well under HubSpot's
-      // 65 535-char signature limit when the data-URI is base64-encoded.
-      circleCropDataUri(ev.target.result, 128).then(circular => {
+      circleCropDataUri(ev.target.result, 128).then(async circular => {
         state.photo = circular;
-        photoPreview.src = state.photo;
+        state.photoHubspotUrl = '';
+        photoPreview.src = circular;
         photoPreview.style.display = 'block';
-        photoLabel.textContent = file.name;
+        photoLabel.textContent = `${file.name} — enviando…`;
         render();
+        try {
+          const filename = `foto-${Date.now()}.png`;
+          state.photoHubspotUrl = await uploadToHubspot(circular, filename);
+          photoLabel.textContent = file.name;
+          refreshExportHtml();
+        } catch (err) {
+          console.error('Upload HubSpot falhou:', err);
+          photoLabel.textContent = `${file.name} — upload falhou`;
+        }
       });
     };
     reader.readAsDataURL(file);
@@ -854,7 +878,8 @@
 
   function buildHubspotHtml() {
     const tpl = LAYOUTS[state.layout];
-    let html = tpl.render(state);
+    const exportState = state.photoHubspotUrl ? { ...state, photo: state.photoHubspotUrl } : state;
+    let html = tpl.render(exportState);
     for (const [local, cdn] of Object.entries(HUBSPOT_ASSET_URLS)) {
       html = html.split(`src="${local}"`).join(`src="${cdn}"`);
     }

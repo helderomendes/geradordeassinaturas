@@ -1,0 +1,1 @@
+window.REVI_HS_TOKEN = 'COLOQUE_O_TOKEN_AQUI';
