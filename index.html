@@ -537,6 +537,16 @@
       </div>
     </div>
 
+    <!-- Export settings -->
+    <div class="section">
+      <div class="section-title">Exportação HTML (HubSpot)</div>
+      <div class="field">
+        <label>URL base das imagens</label>
+        <input class="input" id="f-image-base-url" placeholder="https://userevi.com/assets/email-sig" />
+      </div>
+      <p style="font-size:11.5px;color:var(--ink-300);margin:0 0 4px;line-height:1.5;">Cole a URL da pasta onde as imagens <code style="background:rgba(255,255,255,0.08);padding:1px 4px;border-radius:4px;">logo-revi-fundo-claro.png</code>, <code style="background:rgba(255,255,255,0.08);padding:1px 4px;border-radius:4px;">linkedin-blue.png</code> etc. estão hospedadas. Sem isso, o HTML do HubSpot usará base64 (muito grande).</p>
+    </div>
+
     <!-- Palette -->
     <div class="section">
       <div class="section-title">Paleta de cores</div>
@@ -604,6 +614,7 @@
     ctaUrl: 'https://meetings.hubspot.com/nicholas-love/revezamento-de-qualificacao-?uuid=4523ca86-cf3e-40f5-b09c-2a00a9232ddd',
     paletteId: 'revi',
     palette: { ...window.DEFAULT_PALETTE },
+    imageBaseUrl: '',
   };
 
   // ── Layout cards ──
@@ -652,6 +663,9 @@
   setupToggle('t-logo', 'showLogo');
   setupToggle('t-cta', 'showCta');
   setupToggle('t-instagram', 'showInstagram');
+
+  const imageBaseUrlEl = document.getElementById('f-image-base-url');
+  imageBaseUrlEl.addEventListener('input', () => { state.imageBaseUrl = imageBaseUrlEl.value.trim(); refreshExportHtml(); });
 
   // ── Palette presets ──
   const presetsEl = document.getElementById('presets');
@@ -828,15 +842,30 @@
   // and avoids the "Document is not focused" error in sandboxed iframes.
   // Defined as `function` so it's hoisted and callable from render() below.
   let _exportHtml = '';
+  let _hubspotHtml = '';
+
   function minifyHtml(html) {
     return html
-      .replace(/<!--[\s\S]*?-->/g, '')        // strip comments
-      .replace(/>\s+</g, '><')                 // collapse whitespace between tags
-      .replace(/\s{2,}/g, ' ')                 // collapse runs of spaces
-      .replace(/^\s+|\s+$/g, '')               // trim
-      .replace(/\s*=\s*/g, '=')               // remove spaces around = in attributes
-      .replace(/; /g, ';')                     // compress inline style semicolons
-      .replace(/: /g, ':');                    // compress inline style colons
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/>\s+</g, '><')
+      .replace(/\s{2,}/g, ' ')
+      .replace(/^\s+|\s+$/g, '')
+      .replace(/; /g, ';')
+      .replace(/: /g, ':');
+  }
+
+  function buildHubspotHtml() {
+    const tpl = LAYOUTS[state.layout];
+    let html = tpl.render(state);
+    const base = (state.imageBaseUrl || '').replace(/\/$/, '');
+    if (base) {
+      // Replace relative asset paths with absolute URLs, leaving base64 photo untouched.
+      html = html.replace(/src="assets\//g, `src="${base}/`);
+    } else {
+      // No base URL configured — fall back to inlined base64 so images still show.
+      html = inlineLogosForExport(html);
+    }
+    return minifyHtml(html);
   }
 
   async function refreshExportHtml() {
@@ -844,6 +873,7 @@
       await Promise.all(ASSET_PATHS.map(loadLogoDataUri));
       const tpl = LAYOUTS[state.layout];
       _exportHtml = minifyHtml(inlineLogosForExport(tpl.render(state)));
+      _hubspotHtml = buildHubspotHtml();
     } catch (e) { console.error(e); }
   }
 
@@ -956,7 +986,7 @@
   }
 
   function copyHtml() {
-    const sig = _exportHtml || '';
+    const sig = _hubspotHtml || '';
     if (!sig) { showToast('Aguarde um instante…'); return; }
     copyToClipboard({ html: sig, plain: sig, kind: 'code' });
   }
