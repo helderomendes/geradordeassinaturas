@@ -724,7 +724,9 @@
       // transparent corners. Many email clients (Outlook desktop, some Gmail
       // configs) strip border-radius on <img>; baking the circle into the
       // pixels guarantees it round everywhere.
-      circleCropDataUri(ev.target.result, 256).then(circular => {
+      // 128px keeps good quality in email while staying well under HubSpot's
+      // 65 535-char signature limit when the data-URI is base64-encoded.
+      circleCropDataUri(ev.target.result, 128).then(circular => {
         state.photo = circular;
         photoPreview.src = state.photo;
         photoPreview.style.display = 'block';
@@ -826,11 +828,22 @@
   // and avoids the "Document is not focused" error in sandboxed iframes.
   // Defined as `function` so it's hoisted and callable from render() below.
   let _exportHtml = '';
+  function minifyHtml(html) {
+    return html
+      .replace(/<!--[\s\S]*?-->/g, '')        // strip comments
+      .replace(/>\s+</g, '><')                 // collapse whitespace between tags
+      .replace(/\s{2,}/g, ' ')                 // collapse runs of spaces
+      .replace(/^\s+|\s+$/g, '')               // trim
+      .replace(/\s*=\s*/g, '=')               // remove spaces around = in attributes
+      .replace(/; /g, ';')                     // compress inline style semicolons
+      .replace(/: /g, ':');                    // compress inline style colons
+  }
+
   async function refreshExportHtml() {
     try {
       await Promise.all(ASSET_PATHS.map(loadLogoDataUri));
       const tpl = LAYOUTS[state.layout];
-      _exportHtml = inlineLogosForExport(tpl.render(state).trim());
+      _exportHtml = minifyHtml(inlineLogosForExport(tpl.render(state)));
     } catch (e) { console.error(e); }
   }
 
